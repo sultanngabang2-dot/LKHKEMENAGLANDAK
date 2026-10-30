@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplikasi Lembar Kinerja Harian (LKH)</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome untuk Ikon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- html2pdf.js CDN untuk Ekspor PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+  <!-- Google Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    /* Format cetak / Print Styling */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printArea, #printArea * {
+        visibility: visible;
+      }
+      #printArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 20px;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+
+    .lkh-table th, .lkh-table td {
+      border: 1px solid #000;
+      padding: 8px 10px;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Header & Navigasi -->
+  <header class="bg-emerald-700 text-white shadow-md no-print">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="p-2.5 bg-emerald-800 rounded-xl">
+          <i class="fa-solid fa-file-invoice text-xl text-emerald-200"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight">E-LKH Madrasah</h1>
+          <p class="text-xs text-emerald-100">Lembar Kinerja Harian Guru & Tenaga Kependidikan</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-2">
+        <button onclick="toggleGithubModal()" class="px-3 py-2 bg-emerald-800 hover:bg-emerald-900 text-emerald-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+          <i class="fa-brands fa-github text-sm"></i> Cara Online di GitHub
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Kontainer Utama -->
+  <main class="max-w-7xl mx-auto px-4 py-6 w-full flex-1">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Panel Form Kiri (Input & Pengaturan) -->
+      <div class="lg:col-span-4 space-y-6 no-print">
+        
+        <!-- Tab Navigasi Form -->
+        <div class="bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex text-sm">
+          <button id="tabInputBtn" onclick="switchTab('input')" class="flex-1 py-2 font-medium rounded-xl text-center bg-emerald-600 text-white transition">
+            <i class="fa-solid fa-plus-circle mr-1"></i> Entri Kegiatan
+          </button>
+          <button id="tabProfileBtn" onclick="switchTab('profile')" class="flex-1 py-2 font-medium rounded-xl text-center text-slate-600 hover:text-emerald-700 transition">
+            <i class="fa-solid fa-user-tie mr-1"></i> Data TTD & Profil
+          </button>
+        </div>
+
+        <!-- Form Tambah Kegiatan -->
+        <div id="sectionInput" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+          <h2 class="text-base font-semibold text-slate-800 mb-4 pb-2 border-b flex items-center gap-2">
+            <i class="fa-solid fa-calendar-day text-emerald-600"></i> Tambah Detail Pekerjaan
+          </h2>
+
+          <form id="activityForm" onsubmit="handleSaveActivity(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Tanggal Kegiatan</label>
+              <input type="date" id="actDate" required class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Hari/Tanggal (Otomatis)</label>
+              <input type="text" id="actDay" readonly placeholder="Contoh: Rabu, 2 Februari 2022" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-sm text-slate-600">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Jam Mulai</label>
+                <input type="text" id="actStart" value="07.00 WIB" required placeholder="07.00 WIB" class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Jam Selesai (Otomatis)</label>
+                <input type="text" id="actEnd" readonly value="15.30 WIB" required placeholder="15.30 WIB" class="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium text-slate-700 text-sm">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Detail Pekerjaan</label>
+              <textarea id="actDescription" rows="4" required placeholder="Tuliskan uraian rincian pekerjaan di sini..." class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm"></textarea>
+            </div>
+
+            <div class="flex gap-2">
+              <button type="submit" id="submitBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 shadow-sm">
+                <i class="fa-solid fa-save"></i> Simpan Kegiatan
+              </button>
+              <button type="button" id="cancelEditBtn" onclick="resetForm()" class="hidden px-3 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2.5 rounded-xl font-medium text-sm transition">
+                Batal
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Form Pengaturan Profil & TTD -->
+        <div id="sectionProfile" class="hidden bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+          <h2 class="text-base font-semibold text-slate-800 mb-4 pb-2 border-b flex items-center gap-2">
+            <i class="fa-solid fa-id-card text-emerald-600"></i> Format Data & Penandatangan
+          </h2>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">SATKER (Satuan Kerja)</label>
+              <input type="text" id="instansiName" placeholder="Contoh: MTs NEGERI LANDAK" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Periode Pelaporan (Opsional Kustom)</label>
+              <input type="text" id="docPeriode" placeholder="Kosongkan untuk otomatis (misal: 1 - 28 Februari 2022)" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <div class="border-t pt-3 mt-3">
+              <span class="text-xs font-bold text-emerald-700 uppercase tracking-wider block mb-2">Yang Membuat Laporan (Pegawai)</span>
+              <div class="space-y-2">
+                <input type="text" id="makerName" placeholder="Nama & Gelar (mis: Julfiza, S.T)" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
+                <input type="text" id="makerNip" placeholder="NIP (Kosongkan bila tidak ada)" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
+                <input type="text" id="makerJabatan" placeholder="Jabatan" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
+              </div>
+            </div>
+
+            <div class="border-t pt-3 mt-3">
+              <span class="text-xs font-bold text-emerald-700 uppercase tracking-wider block mb-2">Atasan Langsung / Kepala Madrasah</span>
+              <div class="space-y-2">
+                <input type="text" id="headName" placeholder="Nama Atasan (mis: Dwi Karsono, M. Pd.)" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
+                <input type="text" id="headNip" placeholder="NIP Atasan (Kosongkan bila tidak ada)" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
+              </div>
+            </div>
+
+            <div class="border-t pt-3 mt-3">
+              <label class="block text-xs font-medium text-slate-600 mb-1">Tempat & Tanggal Pengesahan TTD</label>
+              <input type="text" id="docLocation" oninput="syncBerlakuFromSignDate(this.value)" placeholder="Contoh: Ngabang, 1 Maret 2022" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
+              <p class="text-[11px] text-slate-400 mt-1">Penanggalan yang diberikan ke atasan saat pelaporan.</p>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-medium text-slate-600">Teks Catatan Tanggal Berlaku</label>
+                <button type="button" onclick="autoSetBerlakuDate()" class="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold underline">
+                  Sesuaikan dg Tgl TTD
+                </button>
+              </div>
+              <input type="text" id="docBerlakuTgl" placeholder="Contoh: 1 Maret 2022" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
+              <p class="text-[11px] text-slate-400 mt-1">Otomatis mengikuti tanggal penyerahan ke atasan di atas.</p>
+            </div>
+
+            <button onclick="saveProfiles()" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-floppy-disk"></i> Simpan Format Data
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Periode Bulan / Tahun -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+          <h2 class="text-base font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-filter text-emerald-600"></i> Pilih Periode Cetak
+          </h2>
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Bulan</label>
+              <select id="filterMonth" onchange="renderLkhDoc()" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
+                <option value="1">Januari</option>
+                <option value="2">Februari</option>
+                <option value="3">Maret</option>
+                <option value="4">April</option>
+                <option value="5">Mei</option>
+                <option value="6">Juni</option>
+                <option value="7">Juli</option>
+                <option value="8">Agustus</option>
+                <option value="9">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">Tahun</label>
+              <select id="filterYear" onchange="renderLkhDoc()" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500">
+                <!-- Diisi dinamis via JS -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Tombol Download -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button onclick="exportToWord()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition">
+              <i class="fa-solid fa-file-word text-base"></i> Download Word (.docx)
+            </button>
+            <button onclick="exportToPdf()" class="w-full bg-rose-600 hover:bg-rose-700 text-white py-2.5 px-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition">
+              <i class="fa-solid fa-file-pdf text-base"></i> Download PDF
+            </button>
+          </div>
+          <button onclick="window.print()" class="w-full mt-2 bg-slate-700 hover:bg-slate-800 text-white py-2 px-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition">
+            <i class="fa-solid fa-print"></i> Langsung Print LKH
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Preview Dokumen LKH Sisi Kanan -->
+      <div class="lg:col-span-8">
+        
+        <!-- Banner Info Preview -->
+        <div class="mb-4 bg-amber-50 border border-amber-200 text-amber-900 px-4 py-2.5 rounded-xl text-xs flex items-center justify-between no-print">
+          <span class="flex items-center gap-2">
+            <i class="fa-solid fa-circle-info text-amber-600"></i>
+            Pratinjau lembar LKH di bawah ini sesuai dengan dokumen cetak resmi.
+          </span>
+          <span id="dataCountBadge" class="bg-amber-200 text-amber-800 px-2 py-0.5 rounded-md font-bold">0 Data</span>
+        </div>
+
+        <!-- Wadah Dokumen Kertas LKH (Yang Dicetak / Dikonversi) -->
+        <div class="bg-white p-8 sm:p-12 rounded-2xl shadow-md border border-slate-200 text-black" id="printArea">
+          
+          <!-- Header Dokumen Sesuai Format Word -->
+          <div class="text-center mb-6">
+            <h2 class="text-lg sm:text-xl font-bold uppercase tracking-wide">LAPORAN PEKERJAAN HARIAN</h2>
+          </div>
+
+          <!-- Rincian Identitas Pegawai di Dokumen -->
+          <div class="mb-5 text-sm font-normal">
+            <table class="w-full" style="border: none;">
+              <tr style="border: none;">
+                <td style="width: 190px; padding: 2px 0; border: none; font-weight: 600;">NAMA</td>
+                <td style="width: 15px; border: none;">:</td>
+                <td style="border: none;" id="docViewMakerName">-</td>
+              </tr>
+              <tr style="border: none;">
+                <td style="padding: 2px 0; border: none; font-weight: 600;">NIP</td>
+                <td style="border: none;">:</td>
+                <td style="border: none;" id="docViewMakerNip">-</td>
+              </tr>
+              <tr style="border: none;">
+                <td style="padding: 2px 0; border: none; font-weight: 600;">JABATAN</td>
+                <td style="border: none;">:</td>
+                <td style="border: none;" id="docViewMakerJabatan">-</td>
+              </tr>
+              <tr style="border: none;">
+                <td style="padding: 2px 0; border: none; font-weight: 600;">SATKER</td>
+                <td style="border: none;">:</td>
+                <td style="border: none; font-weight: 600;" id="docInstansiTitle">MTs NEGERI LANDAK</td>
+              </tr>
+              <tr style="border: none;">
+                <td style="padding: 2px 0; border: none; font-weight: 600;">ATASAN LANGSUNG</td>
+                <td style="border: none;">:</td>
+                <td style="border: none;" id="docViewHeadName">Dwi Karsono, M. Pd.</td>
+              </tr>
+              <tr style="border: none;">
+                <td style="padding: 2px 0; border: none; font-weight: 600;">PERIODE PELAPORAN</td>
+                <td style="border: none;">:</td>
+                <td style="border: none;" id="docPeriodeTitle">-</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Tabel Utama Lembar Kinerja Harian -->
+          <div class="overflow-x-auto">
+            <table class="lkh-table w-full border-collapse border border-black text-sm text-left">
+              <thead>
+                <tr class="bg-slate-100 text-center font-bold">
+                  <th style="width: 45px; text-align: center;">No</th>
+                  <th style="width: 190px; text-align: center;">Hari/Tanggal</th>
+                  <th style="width: 100px; text-align: center;">Jam Mulai</th>
+                  <th style="width: 100px; text-align: center;">Jam Selesai</th>
+                  <th>Detail Pekerjaan</th>
+                  <th class="no-print" style="width: 75px; text-align: center;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="lkhTableBody">
+                <!-- Baris Data Dimuat Dinamis -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Catatan Kaki Sesuai Format -->
+          <div class="mt-6 text-xs text-slate-800 leading-relaxed">
+            <p class="font-bold">Catatan :</p>
+            <ol class="list-decimal pl-5 space-y-0.5">
+              <li>Laporan ini berisi harian, dan dilaporkan secara mingguan dengan ditandatangani oleh Atasan Langsung/Kepala Madrasah.</li>
+              <li>Laporan ini berlaku sejak tanggal <span id="docBerlakuSpan" class="font-medium">1 Maret 2022</span></li>
+            </ol>
+          </div>
+
+          <!-- Blok Tanda Tangan Bawah -->
+          <div class="mt-8 text-sm">
+            <div class="text-right mb-6 pr-6">
+              <span id="docSignDate" class="font-medium">Ngabang, 1 Maret 2022</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 text-center">
+              <!-- Kolom TTD Atasan / Kepala Madrasah (Kiri) -->
+              <div class="flex flex-col items-center justify-between h-36">
+                <div>
+                  <p class="font-semibold">Mengetahui/Menyetujui,</p>
+                </div>
+                <div>
+                  <p class="font-bold" id="docSignHeadName">(DWI KARSONO, M. Pd.)</p>
+                  <p class="text-xs mt-0.5" id="docSignHeadNip"></p>
+                </div>
+              </div>
+
+              <!-- Kolom TTD Pembuat LKH (Kanan) -->
+              <div class="flex flex-col items-center justify-between h-36">
+                <div>
+                  <p class="font-semibold">Yang Membuat Laporan,</p>
+                </div>
+                <div>
+                  <p class="font-bold uppercase" id="docSignMakerName">(JULFIZA, S.T)</p>
+                  <p class="text-xs mt-0.5" id="docSignMakerNip"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Modal Panduan Onlinekan di GitHub Pages -->
+  <div id="githubModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+      <div class="flex justify-between items-center pb-3 border-b">
+        <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+          <i class="fa-brands fa-github text-emerald-600"></i> Cara Membuka Website Ini Online Gratis di GitHub Pages
+        </h3>
+        <button onclick="toggleGithubModal()" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+      </div>
+
+      <div class="mt-4 text-sm text-slate-600 space-y-3 leading-relaxed">
+        <p>Aplikasi ini berbentuk <strong>Single-Page File</strong> sehingga bisa langsung di-onlinekan tanpa perlu menyewa web hosting berbayar.</p>
+        
+        <ol class="list-decimal pl-5 space-y-2">
+          <li><strong>Simpan File:</strong> Simpan atau download kode ini dan beri nama file persis <code class="bg-slate-100 text-rose-600 px-1 py-0.5 rounded">index.html</code>.</li>
+          <li><strong>Buat Akun & Repo di GitHub:</strong> Masuk ke <a href="https://github.com" target="_blank" class="text-emerald-600 underline">github.com</a>, lalu klik <strong>New Repository</strong>.</li>
+          <li>Beri nama repositori (contoh: <code class="bg-slate-100 px-1 py-0.5 rounded">lkh-madrasah</code>) dan pilih <strong>Public</strong>.</li>
+          <li><strong>Upload File:</strong> Klik menu <em>Add file &gt; Upload files</em>, seret file <code class="bg-slate-100 px-1 py-0.5 rounded">index.html</code> yang tadi, lalu klik <strong>Commit changes</strong>.</li>
+          <li><strong>Aktifkan GitHub Pages:</strong>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li>Buka tab <strong>Settings</strong> di repositori Anda.</li>
+              <li>Pilih menu <strong>Pages</strong> di bilah samping kiri.</li>
+              <li>Pada bagian <em>Branch</em>, ubah <span class="font-semibold">None</span> menjadi <span class="font-semibold">main</span> atau <span class="font-semibold">master</span>, lalu klik <strong>Save</strong>.</li>
+            </ul>
+          </li>
+          <li>Tunggu 1-2 menit. Repositori Anda akan memiliki link publik seperti: <br>
+            <code class="bg-emerald-50 text-emerald-700 font-mono text-xs p-1.5 rounded block mt-1">https://username-anda.github.io/lkh-madrasah/</code>
+          </li>
+        </ol>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button onclick="toggleGithubModal()" class="bg-emerald-600 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-700 transition">
+          Mengerti
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast Container -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl text-sm shadow-xl flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+    <i class="fa-solid fa-check text-emerald-400"></i>
+    <span id="toastMsg">Pesan Berhasil</span>
+  </div>
+
+  <!-- Logika Aplikasi (JavaScript) -->
+  <script>
+    // State Penyimpanan Data
+    const STORAGE_KEY_ITEMS = "lkh_madrasah_entries_v2";
+    const STORAGE_KEY_PROFILE = "lkh_madrasah_profile_v2";
+
+    let entries = [];
+    let editId = null;
+
+    // Profil default persis format file upload
+    let profile = {
+      instansi: "MTs NEGERI LANDAK",
+      makerName: "Julfiza, S.T",
+      makerNip: "",
+      makerJabatan: "Guru",
+      headName: "Dwi Karsono, M. Pd.",
+      headNip: "",
+      periodeText: "",
+      signDate: "Ngabang, 1 Maret 2022",
+      berlakuTgl: "1 Maret 2022"
+    };
+
+    const INDO_DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const INDO_MONTHS = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+
+    // Inisialisasi Aplikasi Saat Memuat Halaman
+    window.onload = function() {
+      initYearSelector();
+      loadStoredData();
+      setupDateInputListener();
+      setDefaultDates();
+      renderProfileForm();
+      renderLkhDoc();
+    };
+
+    // Tampilkan pesan toast
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      const toastMsg = document.getElementById("toastMsg");
+      toastMsg.innerText = msg;
+      toast.classList.remove("translate-y-20", "opacity-0");
+      setTimeout(() => {
+        toast.classList.add("translate-y-20", "opacity-0");
+      }, 3000);
+    }
+
+    // Inisialisasi dropdown tahun
+    function initYearSelector() {
+      const yearSelect = document.getElementById('filterYear');
+      const currentYear = new Date().getFullYear();
+      yearSelect.innerHTML = '';
+      
+      for(let y = currentYear - 4; y <= currentYear + 3; y++) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.innerText = y;
+        if(y === currentYear) opt.selected = true;
+        yearSelect.appendChild(opt);
+      }
+    }
+
+    // Set tanggal default untuk form input
+    function setDefaultDates() {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      document.getElementById('actDate').value = dateStr;
+      updateDayFromDate(dateStr);
+
+      document.getElementById('filterMonth').value = now.getMonth() + 1;
+      document.getElementById('filterYear').value = yyyy;
+    }
+
+    // Listener auto-detect hari dan jam kerja standar Kemenag / Madrasah
+    function setupDateInputListener() {
+      const actDateInput = document.getElementById('actDate');
+      actDateInput.addEventListener('change', function() {
+        updateDayFromDate(this.value);
+      });
+      // Dukung event input untuk deteksi instan saat memilih tanggal
+      actDateInput.addEventListener('input', function() {
+        updateDayFromDate(this.value);
+      });
+    }
+
+    // Fungsi mendapatkan jam selesai sesuai aturan hari kerja
+    function getStandardEndTime(dateStr) {
+      if(!dateStr) return "15.30 WIB";
+      const parts = dateStr.split('-');
+      if(parts.length !== 3) return "15.30 WIB";
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      const dayIndex = d.getDay(); // 5 = Jumat
+      return (dayIndex === 5) ? "16.00 WIB" : "15.30 WIB";
+    }
+
+    function updateDayFromDate(dateStr) {
+      if(!dateStr) return;
+      const parts = dateStr.split('-');
+      if(parts.length !== 3) return;
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      const dayIndex = d.getDay();
+      const dayName = INDO_DAYS[dayIndex];
+      const indoFormatted = `${dayName}, ${formatIndoDate(dateStr)}`;
+      document.getElementById('actDay').value = indoFormatted;
+
+      // Senin s.d. Kamis: 15.30 WIB, Jumat: 16.00 WIB
+      document.getElementById('actEnd').value = (dayIndex === 5) ? "16.00 WIB" : "15.30 WIB";
+    }
+
+    // Format nama dengan gelar M. Pd. yang benar (Nama HURUF BESAR, gelar M. Pd.)
+    function formatHeadSignatureName(name) {
+      if(!name) return "( .................................... )";
+      let clean = name.trim();
+      // Standarisasi gelar M.Pd / M.PD / M. Pd. menjadi M. Pd.
+      clean = clean.replace(/,\s*M\.?\s*P[dD]\.?/gi, ", M. Pd.");
+      
+      // Jika mengandung gelar ", M. Pd."
+      if(clean.toLowerCase().includes(", m. pd.")) {
+        const parts = clean.split(/,\s*M\.\s*Pd\./i);
+        return `(${parts[0].trim().toUpperCase()}, M. Pd.)`;
+      }
+      return `(${clean.toUpperCase()})`;
+    }
+
+    // Memuat data dari LocalStorage
+    function loadStoredData() {
+      const savedItems = localStorage.getItem(STORAGE_KEY_ITEMS);
+      if(savedItems) {
+        try {
+          entries = JSON.parse(savedItems);
+        } catch(e) {
+          entries = [];
+        }
+      } else {
+        // Contoh awal sesuai format upload
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        entries = [
+          {
+            id: '1',
+            date: `${yyyy}-${mm}-02`,
+            startTime: '07.00 WIB',
+            endTime: '15.30 WIB',
+            description: 'Melaksanakan kegiatan belajar mengajar dan memeriksa administrasi pembelajaran.'
+          },
+          {
+            id: '2',
+            date: `${yyyy}-${mm}-03`,
+            startTime: '07.00 WIB',
+            endTime: '15.30 WIB',
+            description: 'Membimbing siswa dalam latihan persiapan asesmen madrasah.'
+          }
+        ];
+        saveEntriesToStorage();
+      }
+
+      const savedProfile = localStorage.getItem(STORAGE_KEY_PROFILE);
+      if(savedProfile) {
+        try {
+          profile = { ...profile, ...JSON.parse(savedProfile) };
+          // Pastikan ejaan M. Pd. distandarkan
+          if (profile.headName) {
+            profile.headName = profile.headName.replace(/,\s*M\.?\s*P[dD]\.?/gi, ", M. Pd.");
+          }
+        } catch(e) {}
+      }
+    }
+
+    function saveEntriesToStorage() {
+      localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(entries));
+    }
+
+    function saveProfiles() {
+      profile.instansi = document.getElementById('instansiName').value;
+      profile.periodeText = document.getElementById('docPeriode').value;
+      profile.makerName = document.getElementById('makerName').value;
+      profile.makerNip = document.getElementById('makerNip').value;
+      profile.makerJabatan = document.getElementById('makerJabatan').value;
+      profile.headName = document.getElementById('headName').value;
+      profile.headNip = document.getElementById('headNip').value;
+      profile.signDate = document.getElementById('docLocation').value;
+      profile.berlakuTgl = document.getElementById('docBerlakuTgl').value;
+
+      localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile));
+      renderLkhDoc();
+      showToast("Data profil & penanggalan berhasil diperbarui!");
+    }
+
+    function renderProfileForm() {
+      document.getElementById('instansiName').value = profile.instansi || '';
+      document.getElementById('docPeriode').value = profile.periodeText || '';
+      document.getElementById('makerName').value = profile.makerName || '';
+      document.getElementById('makerNip').value = profile.makerNip || '';
+      document.getElementById('makerJabatan').value = profile.makerJabatan || '';
+      document.getElementById('headName').value = profile.headName || '';
+      document.getElementById('headNip').value = profile.headNip || '';
+      document.getElementById('docLocation').value = profile.signDate || '';
+      document.getElementById('docBerlakuTgl').value = profile.berlakuTgl || '';
+    }
+
+    // Switch Tab Form di Mobile/Desktop
+    function switchTab(tab) {
+      const sInput = document.getElementById('sectionInput');
+      const sProfile = document.getElementById('sectionProfile');
+      const tabInputBtn = document.getElementById('tabInputBtn');
+      const tabProfileBtn = document.getElementById('tabProfileBtn');
+
+      if(tab === 'input') {
+        sInput.classList.remove('hidden');
+        sProfile.classList.add('hidden');
+        tabInputBtn.className = "flex-1 py-2 font-medium rounded-xl text-center bg-emerald-600 text-white transition";
+        tabProfileBtn.className = "flex-1 py-2 font-medium rounded-xl text-center text-slate-600 hover:text-emerald-700 transition";
+      } else {
+        sInput.classList.add('hidden');
+        sProfile.classList.remove('hidden');
+        tabProfileBtn.className = "flex-1 py-2 font-medium rounded-xl text-center bg-emerald-600 text-white transition";
+        tabInputBtn.className = "flex-1 py-2 font-medium rounded-xl text-center text-slate-600 hover:text-emerald-700 transition";
+      }
+    }
+
+    // Tambah / Ubah Kegiatan
+    function handleSaveActivity(e) {
+      e.preventDefault();
+      const dateVal = document.getElementById('actDate').value;
+      const startVal = document.getElementById('actStart').value.trim() || "07.00 WIB";
+      // Pastikan jam selesai selalu konsisten: Jumat = 16.00 WIB, Senin-Kamis = 15.30 WIB
+      const endVal = getStandardEndTime(dateVal);
+      const descVal = document.getElementById('actDescription').value.trim();
+
+      if(!dateVal || !descVal) return;
+
+      if(editId) {
+        // Edit mode
+        const idx = entries.findIndex(item => item.id === editId);
+        if(idx !== -1) {
+          entries[idx].date = dateVal;
+          entries[idx].startTime = startVal;
+          entries[idx].endTime = endVal;
+          entries[idx].description = descVal;
+          showToast("Pekerjaan berhasil diperbarui!");
+        }
+        resetForm();
+      } else {
+        // Tambah baru
+        const newItem = {
+          id: Date.now().toString(),
+          date: dateVal,
+          startTime: startVal,
+          endTime: endVal,
+          description: descVal
+        };
+        entries.push(newItem);
+        showToast("Pekerjaan baru berhasil ditambahkan!");
+        document.getElementById('actDescription').value = '';
+      }
+
+      saveEntriesToStorage();
+      renderLkhDoc();
+    }
+
+    function editItem(id) {
+      const item = entries.find(x => x.id === id);
+      if(!item) return;
+
+      editId = id;
+      document.getElementById('actDate').value = item.date;
+      updateDayFromDate(item.date);
+      document.getElementById('actStart').value = item.startTime || "07.00 WIB";
+      // Otomatis koreksi jam selesai jika hari berubah
+      document.getElementById('actEnd').value = getStandardEndTime(item.date);
+      document.getElementById('actDescription').value = item.description;
+
+      document.getElementById('submitBtn').innerHTML = `<i class="fa-solid fa-check"></i> Perbarui Kegiatan`;
+      document.getElementById('cancelEditBtn').classList.remove('hidden');
+      
+      switchTab('input');
+    }
+
+    function resetForm() {
+      editId = null;
+      document.getElementById('submitBtn').innerHTML = `<i class="fa-solid fa-save"></i> Simpan Kegiatan`;
+      document.getElementById('cancelEditBtn').classList.add('hidden');
+      document.getElementById('actDescription').value = '';
+    }
+
+    function deleteItem(id) {
+      if(!window.confirm("Hapus catatan pekerjaan ini?")) return;
+      entries = entries.filter(x => x.id !== id);
+      saveEntriesToStorage();
+      renderLkhDoc();
+      showToast("Catatan dihapus.");
+    }
+
+    // Format Tanggal Indonesia (contoh: 2 Februari 2022)
+    function formatIndoDate(dateStr) {
+      if(!dateStr) return "-";
+      const parts = dateStr.split('-');
+      if(parts.length !== 3) return dateStr;
+      const y = parts[0];
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      return `${d} ${INDO_MONTHS[m]} ${y}`;
+    }
+
+    // Fungsi ekstraksi tanggal dari string "Kota, DD Bulan YYYY"
+    function extractDateOnly(locationDateStr) {
+      if (!locationDateStr) return "";
+      if (locationDateStr.includes(',')) {
+        return locationDateStr.split(',')[1].trim();
+      }
+      return locationDateStr.trim();
+    }
+
+    // Otomatis sinkronisasi tanggal berlaku dari penanggalan TTD
+    function syncBerlakuFromSignDate(signVal) {
+      const extracted = extractDateOnly(signVal);
+      if (extracted) {
+        document.getElementById('docBerlakuTgl').value = extracted;
+      }
+    }
+
+    function autoSetBerlakuDate() {
+      const signVal = document.getElementById('docLocation').value;
+      const extracted = extractDateOnly(signVal);
+      if (extracted) {
+        document.getElementById('docBerlakuTgl').value = extracted;
+        showToast("Tanggal berlaku disesuaikan dengan tanggal penyerahan TTD.");
+      }
+    }
+
+    function getHariTanggalText(dateStr) {
+      if(!dateStr) return "-";
+      const d = new Date(dateStr + "T00:00:00");
+      const dayName = INDO_DAYS[d.getDay()];
+      return `${dayName}, ${formatIndoDate(dateStr)}`;
+    }
+
+    // Render Dokumen LKH Sesuai Template Unggahan
+    function renderLkhDoc() {
+      const selMonth = parseInt(document.getElementById('filterMonth').value, 10);
+      const selYear = parseInt(document.getElementById('filterYear').value, 10);
+      const monthName = INDO_MONTHS[selMonth - 1];
+
+      // Sinkronisasi teks profil ke preview
+      document.getElementById('docInstansiTitle').innerText = profile.instansi || "MTs NEGERI LANDAK";
+      document.getElementById('docViewMakerName').innerText = profile.makerName || "-";
+      document.getElementById('docViewMakerNip').innerText = profile.makerNip || "-";
+      document.getElementById('docViewMakerJabatan').innerText = profile.makerJabatan || "-";
+      document.getElementById('docViewHeadName').innerText = profile.headName || "-";
+      
+      // Periode pelaporan: kustom atau default bulan berjalan
+      const lastDayOfMonth = new Date(selYear, selMonth, 0).getDate();
+      const defaultPeriode = `1 - ${lastDayOfMonth} ${monthName} ${selYear}`;
+      document.getElementById('docPeriodeTitle').innerText = profile.periodeText || defaultPeriode;
+
+      // Penanggalan tanda tangan default bila belum diset
+      const defaultSignDate = `Ngabang, 1 ${INDO_MONTHS[(selMonth % 12)]} ${selMonth === 12 ? selYear + 1 : selYear}`;
+      const effectiveSignDate = profile.signDate || defaultSignDate;
+      document.getElementById('docSignDate').innerText = effectiveSignDate;
+
+      // Catatan berlaku disesuaikan dengan penanggalan yang diberikan ke atasan
+      const effectiveBerlaku = profile.berlakuTgl || extractDateOnly(effectiveSignDate) || `01 ${monthName} ${selYear}`;
+      document.getElementById('docBerlakuSpan').innerText = effectiveBerlaku;
+
+      // Tanda tangan
+      document.getElementById('docSignHeadName').innerText = formatHeadSignatureName(profile.headName || "DWI KARSONO, M. Pd.");
+      document.getElementById('docSignHeadNip').innerText = profile.headNip ? `NIP. ${profile.headNip}` : "";
+      
+      const makerClean = (profile.makerName || "JULFIZA, S.T").trim().toUpperCase();
+      document.getElementById('docSignMakerName').innerText = `(${makerClean})`;
+      document.getElementById('docSignMakerNip').innerText = profile.makerNip ? `NIP. ${profile.makerNip}` : "";
+
+      // Filter data sesuai bulan & tahun terpilih, urutkan tanggal & jam
+      const filtered = entries.filter(item => {
+        if(!item.date) return false;
+        const [y, m] = item.date.split('-').map(Number);
+        return y === selYear && m === selMonth;
+      }).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      document.getElementById('dataCountBadge').innerText = `${filtered.length} Baris Kegiatan`;
+
+      const tbody = document.getElementById('lkhTableBody');
+      tbody.innerHTML = '';
+
+      if(filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="text-center py-8 text-slate-400 italic">
+              Belum ada kegiatan yang dicatat pada bulan ${monthName} ${selYear}.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      filtered.forEach((row, index) => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition";
+        const autoEndTime = row.endTime || getStandardEndTime(row.date);
+        tr.innerHTML = `
+          <td class="text-center font-medium">${index + 1}</td>
+          <td class="font-medium whitespace-nowrap">${getHariTanggalText(row.date)}</td>
+          <td class="text-center whitespace-nowrap">${row.startTime || "07.00 WIB"}</td>
+          <td class="text-center whitespace-nowrap">${autoEndTime}</td>
+          <td class="whitespace-pre-wrap">${escapeHtml(row.description)}</td>
+          <td class="text-center no-print">
+            <div class="flex items-center justify-center gap-1">
+              <button onclick="editItem('${row.id}')" title="Edit" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded">
+                <i class="fa-solid fa-pen-to-square text-xs"></i>
+              </button>
+              <button onclick="deleteItem('${row.id}')" title="Hapus" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded">
+                <i class="fa-solid fa-trash text-xs"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function escapeHtml(text) {
+      if(!text) return '';
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // ==========================================
+    // EKSPOR KE MICROSOFT WORD (.DOC / .DOCX PERSIS FORMAT UPLOAD)
+    // ==========================================
+    function exportToWord() {
+      const selMonth = parseInt(document.getElementById('filterMonth').value, 10);
+      const selYear = parseInt(document.getElementById('filterYear').value, 10);
+      const monthName = INDO_MONTHS[selMonth - 1];
+
+      const filtered = entries.filter(item => {
+        if(!item.date) return false;
+        const [y, m] = item.date.split('-').map(Number);
+        return y === selYear && m === selMonth;
+      }).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      let rowsHtml = '';
+      if(filtered.length === 0) {
+        rowsHtml = `<tr><td colspan="5" style="border:1px solid #000; text-align:center; padding:12px;">Tidak ada catatan pekerjaan pada periode ini.</td></tr>`;
+      } else {
+        filtered.forEach((r, idx) => {
+          const autoEndTime = r.endTime || getStandardEndTime(r.date);
+          rowsHtml += `
+            <tr>
+              <td style="border:1px solid #000; text-align:center; padding:5px 8px; vertical-align:top;">${idx + 1}</td>
+              <td style="border:1px solid #000; padding:5px 8px; vertical-align:top; white-space:nowrap;">${getHariTanggalText(r.date)}</td>
+              <td style="border:1px solid #000; text-align:center; padding:5px 8px; vertical-align:top; white-space:nowrap;">${r.startTime || "07.00 WIB"}</td>
+              <td style="border:1px solid #000; text-align:center; padding:5px 8px; vertical-align:top; white-space:nowrap;">${autoEndTime}</td>
+              <td style="border:1px solid #000; padding:5px 8px; vertical-align:top; white-space:pre-wrap;">${escapeHtml(r.description)}</td>
+            </tr>
+          `;
+        });
+      }
+
+      const lastDayOfMonth = new Date(selYear, selMonth, 0).getDate();
+      const periodeDisplay = profile.periodeText || `1 - ${lastDayOfMonth} ${monthName} ${selYear}`;
+      const signDateDisplay = profile.signDate || `Ngabang, 1 ${INDO_MONTHS[(selMonth % 12)]} ${selMonth === 12 ? selYear + 1 : selYear}`;
+      const berlakuDisplay = profile.berlakuTgl || extractDateOnly(signDateDisplay) || `01 ${monthName} ${selYear}`;
+
+      // Dokumen HTML standar Word dengan layout table & font Arial persis aslinya
+      const wordContent = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+          <meta charset='utf-8'>
+          <title>Laporan Pekerjaan Harian - ${monthName} ${selYear}</title>
+          <!--[if gte mso 9]>
+          <xml>
+            <w:WordDocument>
+              <w:View>Print</w:View>
+              <w:Zoom>100</w:Zoom>
+              <w:DoNotOptimizeForBrowser/>
+            </w:WordDocument>
+          </xml>
+          <![endif]-->
+          <style>
+            @page Section1 {
+              size: 21.0cm 29.7cm; /* A4 Portrait */
+              margin: 1.5cm 1.5cm 1.5cm 1.5cm;
+              mso-header-margin: 35.4pt;
+              mso-footer-margin: 35.4pt;
+              mso-paper-source: 0;
+            }
+            div.Section1 { page: Section1; }
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body { 
+              font-family: 'Arial', sans-serif; 
+              font-size: 10pt; 
+              color: #000; 
+              line-height: 1.15; 
+              mso-line-height-rule: exactly;
+            }
+            p, tr, td {
+              margin: 0;
+              mso-margin-top-alt: 0pt;
+              mso-margin-bottom-alt: 0pt;
+            }
+            .title {
+              font-size: 12pt; 
+              font-weight: bold; 
+              text-align: center; 
+              margin-bottom: 12px; 
+              padding: 0;
+            }
+            .header-info { 
+              width: 100%; 
+              border: none; 
+              border-collapse: collapse;
+              margin-bottom: 10px; 
+              font-size: 10pt;
+            }
+            .header-info td { 
+              border: none; 
+              padding: 1px 0; 
+              vertical-align: top; 
+              line-height: 1.15;
+            }
+            table.data-table { 
+              border-collapse: collapse; 
+              width: 100%; 
+              margin-top: 4px; 
+              font-size: 9.5pt;
+            }
+            table.data-table th { 
+              border: 1px solid #000; 
+              background-color: #f2f2f2; 
+              padding: 4px 6px; 
+              text-align: center;
+              font-weight: bold; 
+              line-height: 1.15;
+            }
+            table.data-table td {
+              border: 1px solid #000;
+              padding: 3px 6px;
+              vertical-align: top;
+              line-height: 1.2;
+            }
+            .notes {
+              margin-top: 10px;
+              font-size: 8.5pt;
+              line-height: 1.25;
+            }
+            .sign-table {
+              width: 100%;
+              border: none;
+              border-collapse: collapse;
+              margin-top: 18px;
+              font-size: 10pt;
+            }
+            .sign-table td {
+              border: none;
+              vertical-align: top;
+              line-height: 1.15;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="Section1">
+            <div class="title">LAPORAN PEKERJAAN HARIAN</div>
+
+            <table class="header-info">
+              <tr>
+                <td style="width: 180px; font-weight: bold;">NAMA</td>
+                <td style="width: 15px;">:</td>
+                <td>${profile.makerName || ''}</td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold;">NIP</td>
+                <td>:</td>
+                <td>${profile.makerNip || ''}</td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold;">JABATAN</td>
+                <td>:</td>
+                <td>${profile.makerJabatan || ''}</td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold;">SATKER</td>
+                <td>:</td>
+                <td><strong>${profile.instansi || 'MTs NEGERI LANDAK'}</strong></td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold;">ATASAN LANGSUNG</td>
+                <td>:</td>
+                <td>${profile.headName || 'Dwi Karsono, M. Pd.'}</td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold;">PERIODE PELAPORAN</td>
+                <td>:</td>
+                <td>${periodeDisplay}</td>
+              </tr>
+            </table>
+
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;">No</th>
+                  <th style="width: 170px;">Hari/Tanggal</th>
+                  <th style="width: 95px;">Jam Mulai</th>
+                  <th style="width: 95px;">Jam Selesai</th>
+                  <th>Detail Pekerjaan</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+
+            <div class="notes">
+              <strong>Catatan :</strong><br>
+              1. Laporan ini berisi harian, dan dilaporkan secara mingguan dengan ditandatangani oleh Atasan Langsung/Kepala Madrasah.<br>
+              2. Laporan ini berlaku sejak tanggal ${berlakuDisplay}
+            </div>
+
+            <table class="sign-table">
+              <tr>
+                <td style="width: 50%;"></td>
+                <td style="width: 50%; text-align: center; padding-bottom: 20px;">
+                  ${signDateDisplay}
+                </td>
+              </tr>
+              <tr>
+                <td style="text-align: center; width: 50%; vertical-align: top;">
+                  Mengetahui/Menyetujui,<br><br><br><br>
+                  <strong>${formatHeadSignatureName(profile.headName || 'DWI KARSONO, M. Pd.')}</strong>
+                  ${profile.headNip ? `<br>NIP. ${profile.headNip}` : ''}
+                </td>
+                <td style="text-align: center; width: 50%; vertical-align: top;">
+                  Yang Membuat Laporan,<br><br><br><br>
+                  <strong>(${((profile.makerName || 'JULFIZA, S.T').trim().toUpperCase())})</strong>
+                  ${profile.makerNip ? `<br>NIP. ${profile.makerNip}` : ''}
+                </td>
+              </tr>
+            </table>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob(['\ufeff' + wordContent], { type: 'application/msword' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const cleanMaker = (profile.makerName || 'Laporan').replace(/[^a-zA-Z0-9]/g, '_');
+      link.download = `Laporan_Pekerjaan_Harian_${monthName}_${selYear}_${cleanMaker}.doc`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast("File Word berhasil diunduh siap diprint!");
+    }
+
+    // ==========================================
+    // EKSPOR KE PDF (via html2pdf.js)
+    // ==========================================
+    function exportToPdf() {
+      const selMonth = parseInt(document.getElementById('filterMonth').value, 10);
+      const selYear = parseInt(document.getElementById('filterYear').value, 10);
+      const monthName = INDO_MONTHS[selMonth - 1];
+
+      const noPrintElements = document.querySelectorAll('.no-print');
+      noPrintElements.forEach(el => el.style.visibility = 'hidden');
+
+      const element = document.getElementById('printArea');
+      
+      const opt = {
+        margin: [10, 12, 10, 12],
+        filename: `Laporan_Pekerjaan_Harian_${monthName}_${selYear}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      showToast("Sedang menyusun dokumen PDF...");
+
+      html2pdf().set(opt).from(element).save().then(() => {
+        noPrintElements.forEach(el => el.style.visibility = 'visible');
+        showToast("File PDF berhasil diunduh!");
+      }).catch(err => {
+        noPrintElements.forEach(el => el.style.visibility = 'visible');
+        console.error(err);
+        showToast("Gagal mengunduh PDF. Silakan gunakan tombol Print.");
+      });
+    }
+
+    // Buka/Tutup Dialog GitHub Pages
+    function toggleGithubModal() {
+      const modal = document.getElementById('githubModal');
+      modal.classList.toggle('hidden');
+      modal.classList.toggle('flex');
+    }
+  </script>
+</body>
+</html>
